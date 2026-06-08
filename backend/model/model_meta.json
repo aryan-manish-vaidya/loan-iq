@@ -1,0 +1,23 @@
+{
+  "feature_cols": [
+    "age",
+    "income",
+    "employment_status",
+    "credit_score",
+    "loan_amount",
+    "loan_term",
+    "existing_debts",
+    "payment_history"
+  ],
+  "feature_labels": {
+    "age": "Age",
+    "income": "Annual Income",
+    "employment_status": "Employment Status",
+    "credit_score": "Credit / CIBIL Score",
+    "loan_amount": "Loan Amount",
+    "loan_term": "Loan Term (months)",
+    "existing_debts": "Existing Debts",
+    "payment_history": "Payment History"
+  },
+  "model_path": "/Users/axell_av/Documents/VSCODE PROJECTS/Smart Loan Approval/backend/model/loan_model.pkl"
+}

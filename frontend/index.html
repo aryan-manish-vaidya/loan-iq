@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Loan Approval System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ── Loading Overlay ───────────────────────────────────────────────────── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-ring"></div>
+  <div class="loader-title">Analyzing Application</div>
+  <div class="loader-steps" id="loadingSteps"></div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────────────────────────────── -->
+<div class="app-wrapper">
+
+  <!-- ════ HEADER ════ -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+      </div>
+      <div>
+        <div class="header-title">LoanIQ</div>
+        <div class="header-subtitle">AI Credit Risk Platform</div>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <!-- Currency selector -->
+      <div class="currency-wrap">
+        <span class="currency-flag" id="currencyFlag">🇺🇸</span>
+        <select id="currencySelect" class="currency-select" title="Select currency">
+          <option value="USD" data-flag="🇺🇸">USD — US Dollar</option>
+          <option value="EUR" data-flag="🇪🇺">EUR — Euro</option>
+          <option value="GBP" data-flag="🇬🇧">GBP — British Pound</option>
+          <option value="JPY" data-flag="🇯🇵">JPY — Japanese Yen</option>
+          <option value="CAD" data-flag="🇨🇦">CAD — Canadian Dollar</option>
+          <option value="AUD" data-flag="🇦🇺">AUD — Australian Dollar</option>
+          <option value="CHF" data-flag="🇨🇭">CHF — Swiss Franc</option>
+          <option value="INR" data-flag="🇮🇳">INR — Indian Rupee</option>
+          <option value="AED" data-flag="🇦🇪">AED — UAE Dirham</option>
+          <option value="CNY" data-flag="🇨🇳">CNY — Chinese Yuan</option>
+          <option value="SGD" data-flag="🇸🇬">SGD — Singapore Dollar</option>
+          <option value="MXN" data-flag="🇲🇽">MXN — Mexican Peso</option>
+          <option value="BRL" data-flag="🇧🇷">BRL — Brazilian Real</option>
+          <option value="ZAR" data-flag="🇿🇦">ZAR — South African Rand</option>
+        </select>
+      </div>
+
+      <!-- Theme toggle -->
+      <button class="btn-icon" id="themeToggle" title="Toggle theme" aria-label="Toggle light/dark mode">
+        <span id="themeIcon">☀️</span>
+      </button>
+
+      <!-- Status badge -->
+      <div class="status-badge" id="statusBadge" style="display:none">
+        <span class="badge-pulse"></span>
+        <span id="statusText">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════ MODEL METRICS STRIP ════ -->
+  <div class="metrics-strip" id="modelMetricsBar" style="display:none">
+    <div class="metric-pill">
+      <span class="mp-icon">🎯</span>
+      <div>
+        <div class="mp-label">Accuracy</div>
+        <div class="mp-value" id="metricAccuracy">—</div>
+      </div>
+    </div>
+    <div class="metric-pill">
+      <span class="mp-icon">📈</span>
+      <div>
+        <div class="mp-label">ROC-AUC</div>
+        <div class="mp-value" id="metricAUC">—</div>
+      </div>
+    </div>
+    <div class="metric-pill">
+      <span class="mp-icon">🔁</span>
+      <div>
+        <div class="mp-label">CV Score</div>
+        <div class="mp-value" id="metricCV">—</div>
+      </div>
+    </div>
+    <div class="metric-divider"></div>
+    <div class="metric-pill">
+      <span class="mp-icon">📉</span>
+      <div>
+        <div class="mp-label">Rate MAE</div>
+        <div class="mp-value" id="metricMAE">—</div>
+      </div>
+    </div>
+    <div class="metric-pill">
+      <span class="mp-icon">📐</span>
+      <div>
+        <div class="mp-label">Rate R²</div>
+        <div class="mp-value" id="metricR2">—</div>
+      </div>
+    </div>
+    <div class="metric-divider"></div>
+    <div class="metric-pill">
+      <span class="mp-icon">🌲</span>
+      <div>
+        <div class="mp-label">Algorithm</div>
+        <div class="mp-value">Random Forest</div>
+      </div>
+    </div>
+    <div class="metric-pill">
+      <span class="mp-icon">📦</span>
+      <div>
+        <div class="mp-label">Training Set</div>
+        <div class="mp-value">4,000 samples</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ NAVIGATION TABS ════ -->
+  <nav class="page-nav">
+    <button class="nav-tab active" data-page="predict">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Prediction
+    </button>
+    <button class="nav-tab" data-page="analytics">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+      <span class="nav-badge" id="predCount" style="display:none">0</span>
+    </button>
+    <button class="nav-tab" data-page="model">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Model Training
+    </button>
+  </nav>
+
+  <!-- ════ PAGE: PREDICTION ════ -->
+  <div class="page active" id="pagePrediction">
+    <div class="main-grid">
+
+      <!-- ── Left: Form ── -->
+      <aside class="form-panel">
+        <div class="panel-header">
+          <span class="panel-icon">👤</span>
+          <span class="panel-heading">Applicant Details</span>
+        </div>
+
+        <!-- ── ID Lookup ── -->
+        <div class="id-lookup-wrap">
+          <div class="id-lookup-top">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <div>
+              <div class="id-lookup-title">Applicant ID Lookup</div>
+              <div class="id-lookup-sub">Enter an ID to auto-fill financial history</div>
+            </div>
+          </div>
+          <div class="id-input-row">
+            <input type="text" id="applicantIdInput" class="form-input" placeholder="e.g. LIQ-001" autocomplete="off" spellcheck="false" />
+            <button type="button" id="lookupBtn" class="btn-primary" style="white-space:nowrap;padding:0 18px;height:40px;flex-shrink:0">Lookup</button>
+          </div>
+          <div class="id-chips-row">
+            <span class="id-chips-label">Demo IDs:</span>
+            <button type="button" class="id-chip" data-id="LIQ-001">LIQ-001</button>
+            <button type="button" class="id-chip" data-id="LIQ-002">LIQ-002</button>
+            <button type="button" class="id-chip" data-id="LIQ-003">LIQ-003</button>
+            <button type="button" class="id-chip" data-id="LIQ-004">LIQ-004</button>
+            <button type="button" class="id-chip" data-id="LIQ-005">LIQ-005</button>
+            <button type="button" class="id-chip" data-id="LIQ-006">LIQ-006</button>
+            <button type="button" class="id-chip" data-id="LIQ-007">LIQ-007</button>
+            <button type="button" class="id-chip" data-id="LIQ-008">LIQ-008</button>
+            <button type="button" class="id-chip" data-id="LIQ-009">LIQ-009</button>
+            <button type="button" class="id-chip" data-id="LIQ-010">LIQ-010</button>
+          </div>
+          <!-- Profile card rendered here by JS -->
+          <div class="id-profile-card" id="idProfileCard" style="display:none"></div>
+        </div>
+
+        <form id="loanForm" novalidate>
+          <div class="form-grid">
+
+            <!-- Name (span-2) -->
+            <div class="form-group span-2">
+              <label class="form-label" for="applicant_name">Full Name</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input class="form-input" type="text" id="applicant_name" placeholder="Enter applicant name" />
+              </div>
+            </div>
+
+            <!-- Age | Employment -->
+            <div class="form-group">
+              <label class="form-label" for="age">Age</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input class="form-input" type="number" id="age" min="18" max="100" value="35" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="employment_status">Employment</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                <select class="form-input" id="employment_status" required>
+                  <option value="3">Full-time</option>
+                  <option value="2">Self-employed</option>
+                  <option value="1">Part-time</option>
+                  <option value="0">Unemployed</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Annual Income | Loan Amount -->
+            <div class="form-group">
+              <label class="form-label" for="income" id="incomeLabel">Annual Income</label>
+              <div class="input-wrap">
+                <span class="input-prefix" id="incomePrefix">$</span>
+                <input class="form-input has-prefix" type="number" id="income" min="100" value="65000" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="loan_amount" id="loanLabel">Loan Amount</label>
+              <div class="input-wrap">
+                <span class="input-prefix" id="loanPrefix">$</span>
+                <input class="form-input has-prefix" type="number" id="loan_amount" min="100" value="25000" required />
+              </div>
+            </div>
+
+            <!-- Existing Debts | Loan Term -->
+            <div class="form-group">
+              <label class="form-label" for="existing_debts" id="debtLabel">Existing Debts</label>
+              <div class="input-wrap">
+                <span class="input-prefix" id="debtPrefix">$</span>
+                <input class="form-input has-prefix" type="number" id="existing_debts" min="0" value="8000" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="loan_term">Loan Term</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <select class="form-input" id="loan_term" required>
+                  <option value="12">12 months</option>
+                  <option value="24">24 months</option>
+                  <option value="36" selected>36 months</option>
+                  <option value="48">48 months</option>
+                  <option value="60">60 months</option>
+                  <option value="72">72 months</option>
+                  <option value="84">84 months</option>
+                  <option value="120">120 months</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Credit profile strip (shown when a profile is loaded) -->
+            <div class="profile-info-strip span-2" id="profileInfoStrip" style="display:none">
+              <div class="pi-label">Profile loaded from ID</div>
+              <div class="pi-items">
+                <div class="pi-item">
+                  <span class="pi-key">FICO</span>
+                  <span class="pi-val" id="piCreditScore">—</span>
+                </div>
+                <div class="pi-sep"></div>
+                <div class="pi-item">
+                  <span class="pi-key">Payment History</span>
+                  <span class="pi-val" id="piPayHistory">—</span>
+                </div>
+                <div class="pi-sep"></div>
+                <div class="pi-item">
+                  <span class="pi-key">Missed EMIs</span>
+                  <span class="pi-val" id="piMissedEmis">—</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden inputs — populated from ID lookup (used by ML model) -->
+            <input type="hidden" id="credit_score"    value="720" />
+            <input type="hidden" id="payment_history" value="75" />
+            <input type="hidden" id="missed_emis"     value="0" />
+
+            <!-- Action buttons -->
+            <div class="btn-row span-2">
+              <button class="btn-primary" type="submit" id="predictBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Analyze Application
+              </button>
+              <button class="btn-ghost" type="button" id="resetBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+            </div>
+
+          </div>
+        </form>
+      </aside>
+
+      <!-- ── Right: Results ── -->
+      <section class="results-panel" id="resultsArea">
+
+        <!-- Empty state -->
+        <div class="empty-state" id="placeholder">
+          <div class="empty-visual">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.35"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <h3>Awaiting Analysis</h3>
+          <p>Complete the applicant form and click <strong>Analyze Application</strong> to receive an AI-powered credit decision with full risk breakdown.</p>
+        </div>
+
+        <!-- Results (injected by JS) -->
+        <div id="verdictCard"  style="display:none"></div>
+        <div id="statsRow"     style="display:none"></div>
+        <!-- Interest Rate Card (injected by JS) -->
+        <div id="interestCard" style="display:none"></div>
+
+        <div id="reportCard" class="report-card" style="display:none">
+          <div class="report-tabs">
+            <button class="report-tab active" data-tab="tabReasoning">Analysis</button>
+            <button class="report-tab" data-tab="tabFactors">Key Factors</button>
+            <button class="report-tab" data-tab="tabSuggestions">Suggestions</button>
+            <button class="report-tab" data-tab="tabInterestRate">Interest Rate</button>
+          </div>
+          <div class="report-content">
+            <div class="tab-pane active" id="tabReasoning"></div>
+            <div class="tab-pane" id="tabFactors"></div>
+            <div class="tab-pane" id="tabSuggestions"></div>
+            <div class="tab-pane" id="tabInterestRate"></div>
+          </div>
+        </div>
+
+        <div id="chartsSection" style="display:none">
+          <div class="section-label" style="margin-bottom:16px">Visual Breakdown</div>
+          <div class="charts-grid">
+            <div class="chart-card"><div class="chart-title">Feature Importance</div><div class="chart-wrap"><canvas id="chartFeatureImportance"></canvas></div></div>
+            <div class="chart-card"><div class="chart-title">Risk Score</div><div class="chart-wrap"><canvas id="chartRiskGauge"></canvas></div></div>
+            <div class="chart-card"><div class="chart-title">Financial Profile</div><div class="chart-wrap"><canvas id="chartProfile"></canvas></div></div>
+            <div class="chart-card"><div class="chart-title">Approval Probability</div><div class="chart-wrap"><canvas id="chartProbability"></canvas></div></div>
+            <!-- Interest rate gauge — spans full width -->
+            <div class="chart-card" style="grid-column:1/-1">
+              <div class="chart-title">Interest Rate Analysis</div>
+              <div class="interest-rate-chart-row">
+                <div class="chart-wrap" style="height:180px;max-width:180px"><canvas id="chartInterestGauge"></canvas></div>
+                <div id="interestRateBreakdown" class="ir-breakdown"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </div><!-- /pagePrediction -->
+
+  <!-- ════ PAGE: ANALYTICS ════ -->
+  <div class="page" id="pageAnalytics">
+
+    <!-- Empty state for analytics -->
+    <div class="analytics-empty" id="analyticsEmpty">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.3"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <h3>No Data Yet</h3>
+      <p>Run your first prediction to populate the analytics dashboard.</p>
+      <button class="btn-primary" onclick="switchPage('predict')" style="margin-top:8px">Go to Prediction</button>
+    </div>
+
+    <!-- Analytics content (shown once predictions exist) -->
+    <div id="analyticsContent" style="display:none">
+
+      <!-- Summary stat cards -->
+      <div class="section-label" style="margin-bottom:16px">Session Overview</div>
+      <div class="analytics-stats" id="analyticsStats"></div>
+
+      <!-- Charts row -->
+      <div class="section-label" style="margin:28px 0 16px">Trend Analysis</div>
+      <div class="analytics-charts">
+        <div class="chart-card">
+          <div class="chart-title">Approval Probability Trend</div>
+          <div class="chart-wrap" style="height:220px"><canvas id="chartTrend"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Risk Tier Distribution</div>
+          <div class="chart-wrap" style="height:220px"><canvas id="chartRiskDist"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Income vs Loan Amount</div>
+          <div class="chart-wrap" style="height:220px"><canvas id="chartScatter"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Interest Rate Trend</div>
+          <div class="chart-wrap" style="height:220px"><canvas id="chartInterestTrend"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Prediction history table -->
+      <div class="section-label" style="margin:28px 0 16px">Prediction History</div>
+      <div class="history-wrap">
+        <table class="history-table" id="historyTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Status</th>
+              <th>Risk</th>
+              <th>Confidence</th>
+              <th>Interest Rate</th>
+              <th>Income</th>
+              <th>Credit Score</th>
+              <th>Loan Amount</th>
+              <th>Debts</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div><!-- /pageAnalytics -->
+
+  <!-- ════ PAGE: MODEL TRAINING ════ -->
+  <div class="page" id="pageModel">
+
+    <!-- Header row -->
+    <div class="mt-header-row">
+      <div>
+        <div class="section-label" style="margin-bottom:6px">Model Training</div>
+        <div class="mt-subtitle">How LoanIQ trains its AI models — pipeline, metrics, hyperparameters and live logs</div>
+      </div>
+      <button class="btn-primary" id="retrainBtn" style="flex-shrink:0;min-width:160px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span id="retrainBtnText">Retrain Models</span>
+      </button>
+    </div>
+
+    <!-- Training Pipeline -->
+    <div class="mt-pipeline" id="mtPipeline">
+      <div class="mt-pipe-step" data-step="0">
+        <div class="mt-pipe-icon">📦</div>
+        <div class="mt-pipe-name">Data Generation</div>
+        <div class="mt-pipe-desc">5,000 synthetic samples · 9 features · 2 targets</div>
+      </div>
+      <div class="mt-pipe-arrow">›</div>
+      <div class="mt-pipe-step" data-step="1">
+        <div class="mt-pipe-icon">✂️</div>
+        <div class="mt-pipe-name">Train / Test Split</div>
+        <div class="mt-pipe-desc">80% train · 20% test · stratified by approval label</div>
+      </div>
+      <div class="mt-pipe-arrow">›</div>
+      <div class="mt-pipe-step" data-step="2">
+        <div class="mt-pipe-icon">⚙️</div>
+        <div class="mt-pipe-name">Preprocessing</div>
+        <div class="mt-pipe-desc">StandardScaler normalisation applied to all features</div>
+      </div>
+      <div class="mt-pipe-arrow">›</div>
+      <div class="mt-pipe-step" data-step="3">
+        <div class="mt-pipe-icon">🌲</div>
+        <div class="mt-pipe-name">Model Training</div>
+        <div class="mt-pipe-desc">RF Classifier (approval) + RF Regressor (interest rate)</div>
+      </div>
+      <div class="mt-pipe-arrow">›</div>
+      <div class="mt-pipe-step" data-step="4">
+        <div class="mt-pipe-icon">🔁</div>
+        <div class="mt-pipe-name">Cross-Validation</div>
+        <div class="mt-pipe-desc">5-fold stratified CV on training set</div>
+      </div>
+      <div class="mt-pipe-arrow">›</div>
+      <div class="mt-pipe-step" data-step="5">
+        <div class="mt-pipe-icon">✅</div>
+        <div class="mt-pipe-name">Evaluation &amp; Save</div>
+        <div class="mt-pipe-desc">Accuracy · AUC · MAE · R² · Feature Importance</div>
+      </div>
+    </div>
+
+    <!-- Synthetic Data Generation Matrix -->
+    <div class="sdg-section">
+      <div class="sdg-header">
+        <div class="sdg-header-left">
+          <span class="sdg-header-icon">🧬</span>
+          <div>
+            <div class="sdg-header-title">Synthetic Dataset Generation</div>
+            <div class="sdg-header-sub">How each feature and target is generated — distributions, formulas, and correlations</div>
+          </div>
+        </div>
+        <div class="sdg-badge">5,000 samples · 9 features · 2 targets</div>
+      </div>
+      <div class="sdg-table-wrap">
+        <table class="sdg-table">
+          <thead>
+            <tr>
+              <th>Feature / Target</th>
+              <th>Role</th>
+              <th>Distribution / Formula</th>
+              <th>Range</th>
+              <th>Key Correlations</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="sdg-feat">age</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">Normal(μ=38, σ=10) · clipped [18, 70]</td>
+              <td class="sdg-range">18 – 70</td>
+              <td class="sdg-corr">Mild ↑ income</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">income</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">LogNormal(μ=11.0, σ=0.6) · clipped [$15K, $250K]</td>
+              <td class="sdg-range">$15K – $250K</td>
+              <td class="sdg-corr">Base for DTI &amp; LTI ratios</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">employment_status</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">Categorical: Full-time 60% · Self-empl 20% · Part-time 12% · Unemployed 8%</td>
+              <td class="sdg-range">0 – 3</td>
+              <td class="sdg-corr">↓ interest rate (bonus −2%)</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">credit_score</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">Normal(μ=650, σ=80) · clipped [300, 850] (FICO scale)</td>
+              <td class="sdg-range">300 – 850</td>
+              <td class="sdg-corr">Weight 0.30 in approval · up to +8% on rate</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">loan_amount</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">LogNormal(μ=10.0, σ=0.8) · clipped [$1K, $100K]</td>
+              <td class="sdg-range">$1K – $100K</td>
+              <td class="sdg-corr">Used in LTI ratio → approval &amp; rate</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">loan_term</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">Categorical: 36m 30% · 48m 20% · 60m 20% · other 30%</td>
+              <td class="sdg-range">12 – 120 mo</td>
+              <td class="sdg-corr">Independent feature</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">existing_debts</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">LogNormal(μ=9.0, σ=1.0) · clipped [$0, $80K]</td>
+              <td class="sdg-range">$0 – $80K</td>
+              <td class="sdg-corr">Weight 0.25 in approval via DTI</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">payment_history</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">Normal(μ=70, σ=18) · clipped [0, 100]</td>
+              <td class="sdg-range">0 – 100</td>
+              <td class="sdg-corr">Weight 0.20 in approval · ↑ missed_emis</td>
+            </tr>
+            <tr>
+              <td><code class="sdg-feat">missed_emis</code></td>
+              <td><span class="sdg-type sdg-input">Input</span></td>
+              <td class="sdg-formula">Poisson(λ = (1 − payment_history/100) × 4) · clipped [0, 12]</td>
+              <td class="sdg-range">0 – 12</td>
+              <td class="sdg-corr">Correlated with payment_history; +0.6%/missed on rate</td>
+            </tr>
+            <tr class="sdg-derived-row">
+              <td><code class="sdg-feat sdg-feat-derived">debt_to_income</code></td>
+              <td><span class="sdg-type sdg-derived">Derived</span></td>
+              <td class="sdg-formula">existing_debts / (income + 1)</td>
+              <td class="sdg-range">0 – 1 (clipped)</td>
+              <td class="sdg-corr">Used in approval score &amp; rate formula</td>
+            </tr>
+            <tr class="sdg-target-row">
+              <td><code class="sdg-feat sdg-feat-target">loan_approved</code></td>
+              <td><span class="sdg-type sdg-target">Target</span></td>
+              <td class="sdg-formula">score = 0.30·FICO + 0.25·(1−DTI) + 0.20·pay_hist + 0.15·employ + 0.10·(1−LTI) − 0.08·missed + noise → 1 if score &gt; 0.72</td>
+              <td class="sdg-range">0 / 1</td>
+              <td class="sdg-corr">~60% approval rate</td>
+            </tr>
+            <tr class="sdg-target-row">
+              <td><code class="sdg-feat sdg-feat-target">interest_rate</code></td>
+              <td><span class="sdg-type sdg-target">Target</span></td>
+              <td class="sdg-formula">8.0 + (1−FICO)·8 + missed·0.6 + (1−pay_hist)·4 + DTI·3 − employ·2 + LTI·1.5 + noise(σ=0.6)</td>
+              <td class="sdg-range">6% – 20%</td>
+              <td class="sdg-corr">Avg ≈11.5% · std ≈3.2%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sdg-note">
+        <span>ℹ️</span>
+        All continuous features are generated with controlled correlations to simulate realistic credit behaviour. Gaussian noise (σ=0.05) is added to the approval score to prevent perfect separability, ensuring the Random Forest learns probabilistic boundaries rather than exact rules.
+      </div>
+    </div>
+
+    <!-- Key metrics strip -->
+    <div class="mt-metrics-row" id="mtMetricsRow">
+      <div class="mt-metric-card"><div class="mt-mc-icon">🎯</div><div class="mt-mc-val" id="mtAccuracy">—</div><div class="mt-mc-lbl">Accuracy</div><div class="mt-mc-sub">Approval Classifier</div></div>
+      <div class="mt-metric-card"><div class="mt-mc-icon">📈</div><div class="mt-mc-val" id="mtAUC">—</div><div class="mt-mc-lbl">ROC-AUC</div><div class="mt-mc-sub">Area under curve</div></div>
+      <div class="mt-metric-card"><div class="mt-mc-icon">🔁</div><div class="mt-mc-val" id="mtCV">—</div><div class="mt-mc-lbl">CV Accuracy</div><div class="mt-mc-sub">5-fold cross-val</div></div>
+      <div class="mt-metric-card"><div class="mt-mc-icon">📉</div><div class="mt-mc-val" id="mtMAE">—</div><div class="mt-mc-lbl">Rate MAE</div><div class="mt-mc-sub">Interest Regressor</div></div>
+      <div class="mt-metric-card"><div class="mt-mc-icon">📐</div><div class="mt-mc-val" id="mtR2">—</div><div class="mt-mc-lbl">Rate R²</div><div class="mt-mc-sub">Coefficient of det.</div></div>
+      <div class="mt-metric-card"><div class="mt-mc-icon">📦</div><div class="mt-mc-val">4,000</div><div class="mt-mc-lbl">Training Samples</div><div class="mt-mc-sub">80% of dataset</div></div>
+    </div>
+
+    <!-- Two model cards -->
+    <div class="mt-models-row">
+
+      <!-- Approval Classifier -->
+      <div class="mt-model-card" id="mtModelClf">
+        <div class="mt-model-header">
+          <div class="mt-model-icon-wrap clf">🌲</div>
+          <div>
+            <div class="mt-model-title">Approval Classifier</div>
+            <div class="mt-model-algo">Random Forest · Classification</div>
+          </div>
+        </div>
+        <div class="mt-model-metrics" id="mtClfMetrics">
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtClfAcc">—</div><div class="mt-mm-lbl">Accuracy</div></div>
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtClfAUC">—</div><div class="mt-mm-lbl">ROC-AUC</div></div>
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtClfPrec">—</div><div class="mt-mm-lbl">Precision</div></div>
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtClfRec">—</div><div class="mt-mm-lbl">Recall</div></div>
+        </div>
+        <div class="mt-hyperparams">
+          <div class="mt-hp-row"><span class="mt-hp-key">n_estimators</span><span class="mt-hp-val">200</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">max_depth</span><span class="mt-hp-val">12</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">max_features</span><span class="mt-hp-val">"sqrt"</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">class_weight</span><span class="mt-hp-val">"balanced"</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">min_samples_leaf</span><span class="mt-hp-val">2</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">random_state</span><span class="mt-hp-val">42</span></div>
+        </div>
+      </div>
+
+      <!-- Interest Rate Regressor -->
+      <div class="mt-model-card" id="mtModelReg">
+        <div class="mt-model-header">
+          <div class="mt-model-icon-wrap reg">📉</div>
+          <div>
+            <div class="mt-model-title">Interest Rate Regressor</div>
+            <div class="mt-model-algo">Random Forest · Regression</div>
+          </div>
+        </div>
+        <div class="mt-model-metrics" id="mtRegMetrics">
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtRegMAE">—</div><div class="mt-mm-lbl">MAE (%)</div></div>
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtRegR2">—</div><div class="mt-mm-lbl">R² Score</div></div>
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtRegRMSE">—</div><div class="mt-mm-lbl">RMSE (%)</div></div>
+          <div class="mt-mm-box"><div class="mt-mm-val" id="mtRegCV">—</div><div class="mt-mm-lbl">CV R²</div></div>
+        </div>
+        <div class="mt-hyperparams">
+          <div class="mt-hp-row"><span class="mt-hp-key">n_estimators</span><span class="mt-hp-val">200</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">max_depth</span><span class="mt-hp-val">10</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">max_features</span><span class="mt-hp-val">"sqrt"</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">target_range</span><span class="mt-hp-val">6% – 20%</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">min_samples_leaf</span><span class="mt-hp-val">2</span></div>
+          <div class="mt-hp-row"><span class="mt-hp-key">random_state</span><span class="mt-hp-val">42</span></div>
+        </div>
+      </div>
+
+    </div><!-- /mt-models-row -->
+
+    <!-- Charts: Feature Importance + Confusion Matrix -->
+    <div class="mt-charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Feature Importance — Approval Model</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartModelFI"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Confusion Matrix — Test Set (1,000 samples)</div>
+        <div class="cm-layout" style="padding:10px 6px 6px">
+          <div class="cm-row-label">Actual</div>
+          <div class="cm-inner">
+            <div class="cm-axis-label">Predicted</div>
+            <div class="cm-grid">
+              <div class="cm-cell cm-tn"><div class="cm-cell-val" id="cmTN">—</div><div class="cm-cell-lbl">True Neg</div></div>
+              <div class="cm-cell cm-fp"><div class="cm-cell-val" id="cmFP">—</div><div class="cm-cell-lbl">False Pos</div></div>
+              <div class="cm-cell cm-fn"><div class="cm-cell-val" id="cmFN">—</div><div class="cm-cell-lbl">False Neg</div></div>
+              <div class="cm-cell cm-tp"><div class="cm-cell-val" id="cmTP">—</div><div class="cm-cell-lbl">True Pos</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Training Log terminal -->
+    <div class="mt-log-card">
+      <div class="mt-log-header">
+        <span>▶ Training Log</span>
+        <span class="mt-log-status" id="mtLogStatus">● Idle</span>
+      </div>
+      <div class="mt-log-body" id="mtLogBody">
+        <span class="log-dim">— Run a prediction or click Retrain Models to see live output —</span>
+      </div>
+    </div>
+
+    <!-- Retrain row -->
+    <div class="mt-retrain-row">
+      <div class="mt-retrain-info">
+        <div class="mt-retrain-title">Retrain on fresh synthetic data</div>
+        <div class="mt-retrain-desc">Generates a new 5,000-sample dataset and retrains both models. Takes ~15 seconds.</div>
+      </div>
+      <button class="btn-primary" id="retrainBtn2" style="flex-shrink:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span id="retrainBtn2Text">Retrain Now</span>
+      </button>
+    </div>
+
+  </div><!-- /pageModel -->
+
+</div><!-- /app-wrapper -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

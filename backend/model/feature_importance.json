@@ -1,0 +1,10 @@
+{
+  "income": 0.1983,
+  "existing_debts": 0.178,
+  "payment_history": 0.1697,
+  "employment_status": 0.1502,
+  "credit_score": 0.116,
+  "loan_amount": 0.1092,
+  "age": 0.0507,
+  "loan_term": 0.0279
+}

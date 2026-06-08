@@ -1,0 +1,17 @@
+{
+  "mae": 0.7105,
+  "rmse": 0.9054,
+  "r2_score": 0.8356,
+  "cv_r2_mean": 0.8372,
+  "cv_r2_std": 0.0065,
+  "feature_cols": [
+    "credit_score",
+    "payment_history",
+    "existing_debts",
+    "income",
+    "loan_amount",
+    "missed_emis",
+    "employment_status",
+    "loan_term"
+  ]
+}
